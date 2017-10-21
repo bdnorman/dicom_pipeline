@@ -26,7 +26,9 @@ def create_link_dict(dicom_directory, contour_directory, link_csv):
         #Skip the headers of the .csv file
         reader.next()
         for row in reader:
-            directory_link[os.path.join(dicom_directory+row[0])+'/']=os.path.join(contour_directory+row[1]+'/i-contours/')
+            #directory_link[os.path.join(dicom_directory+row[0])+'/']=os.path.join(contour_directory+row[1],'i-contours')
+            directory_link[os.path.join(dicom_directory + row[0])] = os.path.join(contour_directory + row[1],
+                                                                                        'i-contours/')
         dicom_contour_pairs={}
         for key, val in directory_link.items():
             contour_files = [val + t for t in os.listdir(val) if isfile(join(val, t)) and t.endswith('.txt')]
@@ -34,7 +36,7 @@ def create_link_dict(dicom_directory, contour_directory, link_csv):
             # contour path file name
             contour_slices = [int(s[s.find('icontour')-5:s.find('icontour')-1]) for s in contour_files]
             for d in os.listdir(key):
-                dicom_file = key + d
+                dicom_file = join(key, d)
                 if isfile(dicom_file) and dicom_file.endswith('.dcm'):
                     dicom_num = int(d[:-4])
                     #Match dicom file slice with contour slice number, print to log if the dicom slice does not have
@@ -120,8 +122,8 @@ class batch_generation:
 
 
 def main():
-    # f = open('log.txt', 'w')
-    # sys.stdout=f
+    f = open('log.txt', 'w')
+    sys.stdout=f
     batch_size = 8
     dicom_directory = '/Users/Berk/Downloads/final_data/dicoms/'
     contour_directory = '/Users/Berk/Downloads/final_data/contourfiles/'
@@ -140,7 +142,7 @@ def main():
             pylab.savefig(str(image_count) + '.png')
             image_count+=1
 
-    #f.close()
+    f.close()
 
 if __name__ == "__main__":
     main()
