@@ -26,7 +26,6 @@ def create_link_dict(dicom_directory, contour_directory, link_csv):
         #Skip the headers of the .csv file
         reader.next()
         for row in reader:
-            #directory_link[os.path.join(dicom_directory+row[0])+'/']=os.path.join(contour_directory+row[1],'i-contours')
             directory_link[os.path.join(dicom_directory + row[0])] = os.path.join(contour_directory + row[1],
                                                                                         'i-contours/')
         dicom_contour_pairs={}
@@ -129,6 +128,7 @@ def main():
     contour_directory = '/Users/Berk/Downloads/final_data/contourfiles/'
     link_coding = '/Users/Berk/Downloads/final_data/link.csv'
     dicom_contour_dict = create_link_dict(dicom_directory, contour_directory, link_coding)
+    dicom_contour_dict
     dicom_and_contour = batch_generation(batch_size=batch_size)
 
     image_count=0
