@@ -1,7 +1,7 @@
 # dicom_pipeline
 This is a pipeline for loading in dicom and contour files. The pipeline also has the functionality of generating batches of the dicom/contour data as arrays of `height x width x batch size`, while also keeping track of the number of epochs used.
 Use of this function is simply  
-`$ python main_dicom_pipeline`  
+`$ python main_dicom_pipeline.py`  
 This will return a log of the output in the *log.txt* file which will indicate: 
  * which dicom files did not have a corresponding contour files
  * message if a loaded dicom file is not of shape 256x256. 
