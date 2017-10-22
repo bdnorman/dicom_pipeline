@@ -7,7 +7,6 @@ import csv
 import os
 from os.path import isfile, join
 import numpy as np
-import numpy.matlib
 import random
 import sys
 import matplotlib.pyplot as plt
