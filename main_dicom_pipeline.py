@@ -7,11 +7,13 @@ import csv
 import os
 from os.path import isfile, join
 import numpy as np
+import numpy.matlib
 import random
 import sys
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import pylab
+
 
 def create_link_dict(dicom_directory, contour_directory, link_csv):
     '''
@@ -56,51 +58,75 @@ class batch_generation:
     epochs_completed = 0
     new_batches_completed = 0
     start = 0
+    all_dicoms = []
+    image_count = 0
     def __init__(self, batch_size):
         self.batch_size = batch_size
 
-    def load_dicom_mask(self, dicom_file_dir, contour_file_dir):
+    def load_dicom_mask(self, dicom_file_dir, contour_file_dir, image_saving = False):
         ''' General function to load dicoms and contours into arrays
 
         :param dicom_file_dir: file path to dicom file
         :param contour_file_dir: file path to contour txt file corresponding to dicome file
+        :param image_saving: specify if images of dicoms with contour masks should be saved for examination of validity
+        of contour parsing functions
         :return: dicom_array is the 256 x256 array representing the MRI slice, contour_mask is a binary mask
                 separating "the left ventricular blood pool from the heart muscle"
 
         '''
-
         dicom_array = parse.parse_dicom_file(dicom_file_dir)
         dicom_array = dicom_array['pixel_data']
-        contour_coords = parse.parse_contour_file(contour_file_dir)
         height = dicom_array.shape[0]
         width = dicom_array.shape[1]
         if height!=256 and width!=256:
             print('%s does not have correct 225 x 225 dimensions. Potentially look into')
+        contour_coords = parse.parse_contour_file(contour_file_dir)
         contour_mask = parse.poly_to_mask(contour_coords, height, width)
         contour_mask = np.asarray(contour_mask, dtype=np.int)
+        if image_saving:
+            contour_mask = np.ma.masked_where(contour_mask == 0, contour_mask)
+            plt.imshow(dicom_array, cmap=mpl.cm.bone)
+            plt.imshow(contour_mask, cmap=mpl.cm.jet_r, interpolation='nearest')
+            pylab.savefig(str(self.image_count) + '.png')
+            self.image_count += 1
         return dicom_array, contour_mask
 
-    # Function that actually generates batch array for input images and output masks, both of size
-    # 256 x 256 x batch size
-    def new_batch(self, dicom_contour_pairs):
+    def data_shuffler(self, dicom_contour_pairs):
+        '''
+
+        :param dicom_contour_pairs: dictionary of all dicom file paths and their corresponding contour file paths.
+        This function is only called on the first iteration of each new epoch. It randomly shuffles all of the data and
+        randomly removes the remainder of data set size / batch size
+        '''
+        n_data = len(dicom_contour_pairs)
+        self.all_dicoms = list(dicom_contour_pairs.keys())
+        random.shuffle(self.all_dicoms)
+        extra_data = n_data % self.batch_size
+        if extra_data != 0:
+            print(
+            'Warning: batch size is not divisble by total number of data points. Randomly deleting remainder %d iterations for this epoch' % extra_data)
+            for i in range(extra_data):
+                self.all_dicoms.remove(random.choice(self.all_dicoms))
+
+    def new_batch(self, dicom_contour_pairs, image_saving):
         ''' Function that actually generates batch array for input images and output masks, both of size
         256 x 256 x batch size
 
         :param dicom_contour_pairs: dictionary of all dicom file paths and their corresponding countoru file paths
+        :param image_saving: specify if images of dicoms with contour masks should be saved for examination of validity
+        of contour parsing functions
         :return: input_batch is an array of batch size # of stacked images and output_batch is the stacked masks
         '''
         n_data = len(dicom_contour_pairs)
-        if n_data % self.batch_size !=0:
-            sys.exit('Warning: batch size is not divisble by total number of data points')
         batches_to_complete = n_data/self.batch_size
-        all_dicoms = list(dicom_contour_pairs.keys())
         #This randomly shuffles the data at the beggining of each new epoch to meet the requirements of Part 2: #3
         if self.new_batches_completed ==0:
-            random.shuffle(all_dicoms)
+            self.data_shuffler(dicom_contour_pairs)
             self.start = 0
+
         first=True
         for b in range(self.start, self.start + self.batch_size):
-            dicom_array, contour_mask = self.load_dicom_mask(all_dicoms[b], dicom_contour_pairs[all_dicoms[b]])
+            dicom_array, contour_mask = self.load_dicom_mask(self.all_dicoms[b], dicom_contour_pairs[self.all_dicoms[b]], image_saving)
             dicom_array = np.expand_dims(dicom_array, axis=-1)
             contour_mask = np.expand_dims(contour_mask, axis=-1)
             if first:
@@ -124,24 +150,18 @@ def main():
     f = open('log.txt', 'w')
     sys.stdout=f
     batch_size = 8
+    #Specify data directory locations
     dicom_directory = '/Users/Berk/Downloads/final_data/dicoms/'
     contour_directory = '/Users/Berk/Downloads/final_data/contourfiles/'
     link_coding = '/Users/Berk/Downloads/final_data/link.csv'
+
+    #Create dictionary of dicom files and their corresponding contour files
     dicom_contour_dict = create_link_dict(dicom_directory, contour_directory, link_coding)
-    dicom_contour_dict
+
+    #Generate data batches os size batch_size
     dicom_and_contour = batch_generation(batch_size=batch_size)
-
-    image_count=0
     for p in range(len(dicom_contour_dict)/batch_size):
-        input_batch, output_batch = dicom_and_contour.new_batch(dicom_contour_dict)
-        for im in range(batch_size):
-            mask = output_batch[:,:,im]
-            mask = np.ma.masked_where(mask==0, mask)
-            plt.imshow(input_batch[:,:,im], cmap=mpl.cm.bone)
-            plt.imshow(mask, cmap=mpl.cm.jet_r, interpolation='nearest')
-            pylab.savefig(str(image_count) + '.png')
-            image_count+=1
-
+        input_batch, output_batch = dicom_and_contour.new_batch(dicom_contour_dict, image_saving=True)
     f.close()
 
 if __name__ == "__main__":
