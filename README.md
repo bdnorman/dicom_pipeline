@@ -1,25 +1,29 @@
-# dicom_pipeline
-This is a pipeline for loading in dicom and contour files. The pipeline also has the functionality of generating batches of the dicom/contour data as arrays of `height x width x batch size`, while also keeping track of the number of epochs used.
+# dicom_pipeline Phase 2
+*Note: original README from Phase 1 is now save as README_phase1.md*
+
+This is a pipeline for loading in dicome and corresponding contour files for the left ventricle heart muscle outline and left ventricular blood pool. The pipeline also has the functionality of generating batches of the dicom/contour data as arrays of `height x width x batch size`, while also keeping track of the number of epochs used. Finally, it also uses a heuristic thresholding approach to predict the left ventricular blood pool segmentation given the left ventricle heart muscle outline.
 Use of this function is simply  
-`$ python main_dicom_pipeline`  
-This will return a log of the output in the *log.txt* file which will indicate: 
- * which dicom files did not have a corresponding contour files
- * message if a loaded dicom file is not of shape 256x256. 
- * if data list needs to have random remainder removed if total dataset size is not evenly divisible by batch size
- * how many epochs have been completed
- 
- Finally, this script, as is, will also generate images of all dicoms with their contours overlayed onto them as .pngs if `image_saving=True` in the `new_batch` function.
- 
-It should be noted that dicoms that did not have corresponding contour files were not used as it seems contours were made on every 10th slice or so of the entire MRI volume. As such, saving the dicoms that did not have contours with blank masks is not appropriate. This is further discussed at the end when adressing enhancmenets to the pipeline.
+`$ python main_dicom_pipeline.py`  
 
-## Part 1: Parse the DICOM images and Contour Files
-In order to ensure that the parsing contours were done correctly, all 96 of the dicom images with their corresponding overlays were examined. An example of this image can be viewed below.
-Example image:
+This will return a log of the output in the *log.txt* file which will indicate:
+* The t-test results between the intensities of the area between the left ventricular heart muscle and blood pool (which from now on will be reffered to as the between muscle area) and the blood pool itself
+* The average Dice coefficient between the true blood pool segmentations and the predicted blood pool segmentation created using thresholding (where Dice's coefficient is just $2*\frac{T\bigcap P}{|T| + |P|}$ for true segmentation mask T and predicted segmentation mask P)
+
+The script will also create a folder in the cloned directory called `mask_checking` that saves 1 epoch of pngs of the dicoms and the i-contour and o-contour segmentations overlayed on them. Depending on the `batch_size` defined in the main function, this will not save every single dicome file that had o- and i-contours. The script will also save images of the overlayed intensity distributions of the intensities of the area between the between msucle area and the blood pool itself(*density_comparison.png*) and a side by side comparison of the blood pool true segmentation and thresholding generated segmentation(*true_contour_vs_pred_contour.png*)
+
+
+## Part 1: Parse the o-contours
+In order to add the o-contours to their corresponding dicoms and i-contours, my original `create_link_dict` function (now in the `general_load_functions.py` script) also takes in the "contour_type" which can be specified to "icontour" or "ocontour" this will specify if a dictionary mapping dicoms to o-contours should be created or a dictionary mapping dicoms to i-contours. Another change to this function from Phase 1 is that an additional argument called "warnings" was added. It is defaulted to false, but if set to true it will list which dicoms do not have a corresponding icontour or ocontour file. This was set to false (unlike its setup in Phase 1) to allow for a clearn log file.
+
+The `create_link_dict` function was called twice for both contour types and then the two dictionaries were merged so each dicom mapped to a list of its corresponding o-contour and i-contour file. This also meant I had to change the `load_dicom_mask` function so that it now reads in two contour files and then stacks them so the final mask has value 1 for area between the heart muscle and blood pool and the plood pool has value 2.
+
+As in Phase 1, these new segmnetaion masks were save (this time in a new folder that gets created) to ensure that they were being done correctly. An example image of one of these 3-class masks can be viewed below: 
 ![](https://github.com/bdnorman/dicom_pipeline/blob/master/90.png)
-Examination of these images was to ensure that the contours were in fact highlighting the separation of the left ventricular blood pool from the heart muscle. Examining every single image is not a scalable approach with a larger dataset, however randomly sampling a small number of these types of images from the larger dataset is still a valid way to ensure that the contour masks are making sense.
-It should also be noted that no adjustments were made to the suplied code from `dicom_parse_function.py`
 
-## Part 2: Model training pipeline
-A change I made from Part 1 to Part 2 in my code is actually using the batch generation to generate the overlay images over 1 epoch. This also allowed for the testing of the `new_batch` function to ensure the epochs were being calculated correctly. This was confirmed since "1 epoch complete" was printed after I ran the new_batch function 12 times (`dataset size / batch size = 8`). Additionally, all the outputted images from the batch data were different, meaning the code was correctly going through all the randomly shuffled dicom/contour dictionary in 1 epoch.
 
-One of the defficiencies in the code is that all dicom files without corresponding contour files were not used. This is already a fairly small dataset size so doing some type of interpolation between slices given the contours could help increase the datasize by generating more target masks. Other enhancements to the pipeline could include a built-in division of training, validation, and testing data. Given more info about the 2D convolution model, it would also be helpful to have a class for image augmentation or patch-based division.
+## Part 2: Heuristic LV Segmentation approaches
+In order to assess how well a thresholding segmentation would work for the blood pool assuming we are given the outline border of the heart muscle, a general idea of the intensity differences between the between muscle area and blood pool was examined through a two-sample t-test and an overlayed histogram of the normalized intesnities of the two areas. Before extracting the itensities of these two areas, each individual dicom was normalized to be between 0 and 1. This was done since the subjects could have been taken with different scan parameters and in order to undertsand the intensity differences better it is best to have pixels in the same anatomatical regions across dicoms to have close to the same values.
+
+The t-test revlead an extremely large t-statistic resulting in a p-value of esentially 0, indicating the intensity means of the two intensity distributions are different. This is promising for a thresholding segmetnation problem, however when looking at the overlayed histograms, there does still seem to be a decent amount of intensity overlap between the two areas. However, this intensity distribution graphic can be used to create a general threshold cutoff between the two distributions without running anything too mathematicall rigorous to find out where they intersect. Through visual examination, it was decided that a normalized dicom intensity value of 0.14 would be best to try and differentiate the blood pool from the heart muscle.
+
+Using the manually picked threshold cutoff, all thresholded blood pool masks were generated in the `threshold_seg` function and compared to the true blood pool masks using Dice's coefficient to examine overlap. The average Dice coefficient across the 46 samples was 82.02%. I am unsure of how this compares to the literature of this problem, but for such a simple approach this seems to be a reasonable result. An example of the true blood segmentation mask vs. the threshold predicted one can be viewed below:
