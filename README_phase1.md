@@ -15,7 +15,7 @@ It should be noted that dicoms that did not have corresponding contour files wer
 ## Part 1: Parse the DICOM images and Contour Files
 In order to ensure that the parsing contours were done correctly, all 96 of the dicom images with their corresponding overlays were examined. An example of this image can be viewed below.
 Example image:
-![](https://github.com/bdnorman/dicom_pipeline/blob/master/90.png)
+![](https://github.com/bdnorman/dicom_pipeline/blob/master/image_folder/88.png)
 Examination of these images was to ensure that the contours were in fact highlighting the separation of the left ventricular blood pool from the heart muscle. Examining every single image is not a scalable approach with a larger dataset, however randomly sampling a small number of these types of images from the larger dataset is still a valid way to ensure that the contour masks are making sense.
 It should also be noted that no adjustments were made to the suplied code from `dicom_parse_function.py`
 
