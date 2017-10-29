@@ -37,7 +37,7 @@ def intensity_extract(dicom_array, joint_mask, normalize=True):
 def threshhold_seg(dicom_array, joint_mask, threshold, normalize=True):
     '''Function that will create predicted left ventricle segmentation masks just based on thresholding and will return
     the dice coefficient between the true left ventricle mask and the predicted one done through thresholding
-    
+
     :param dicom_array: array from dicom file
     :param joint_mask: joint mask with area between heart muscle and blood pool labelled as 1 and blood pool labelled as
     2
