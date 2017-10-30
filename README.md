@@ -6,6 +6,7 @@ Use of this function is simply
 `$ python main_dicom_pipeline.py`  
 
 This will return a log of the output in the *log.txt* file which will indicate:
+* If batch size will allow for encompassing the whole dataset and how many, if any, epochs were completed 
 * The t-test results between the intensities of the area between the left ventricular heart muscle and blood pool (which from now on will be reffered to as the between muscle area) and the blood pool itself
 * The average Dice coefficient between the true blood pool segmentations and the predicted blood pool segmentation created using thresholding (where Dice's coefficient is just <a href="https://www.codecogs.com/eqnedit.php?latex=2*\frac{T\bigcap&space;P}{|T|&space;&plus;&space;|P|}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?2*\frac{T\bigcap&space;P}{|T|&space;&plus;&space;|P|}" title="2*\frac{T\bigcap P}{|T| + |P|}" /></a> for true segmentation mask T and predicted segmentation mask P)
 
