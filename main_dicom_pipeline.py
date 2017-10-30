@@ -98,8 +98,8 @@ def main():
     #PHASE 1
     #Generate data batches os size batch_size
     dicom_and_contour = dload.batch_generation(batch_size=batch_size)
-    # for p in range(int(np.floor(len(all_contour_dict)/batch_size))):
-    #     input_batch, output_batch = dicom_and_contour.new_batch(all_contour_dict, image_saving=True)
+    for p in range(int(np.floor(len(all_contour_dict)/batch_size))):
+        input_batch, output_batch = dicom_and_contour.new_batch(all_contour_dict, image_saving=True)
 
     #PHASE 2
     all_outer_data=[]
