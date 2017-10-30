@@ -1,3 +1,5 @@
+Warning: batch size is not divisble by total number of data points. Randomly deleting remainder 6 iterations for this epoch
+1 epoch complete
 T-test results comparing intensities inside blood pool (inside the i-contour) to those inside the heart muscles (between i-contour and o-contour)
 Ttest_indResult(statistic=-214.31220791109331, pvalue=0.0)
 Average dice coefficient using thresholding segmetnations method: 82.08%
